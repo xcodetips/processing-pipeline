@@ -36,7 +36,7 @@ else
 end
 
 inputs.each do |mov|
-  basename = File.basename(input_path, '.mov')
+  basename = File.basename(mov, '.mov')
 
   convert_to_mp4(mov, "#{output_path}/#{basename}.mp4")
   convert_to_gif(mov, "#{output_path}/#{basename}.gif")
