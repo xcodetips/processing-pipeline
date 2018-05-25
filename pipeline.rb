@@ -1,3 +1,4 @@
+require 'fileutils'
 require 'tmpdir'
 
 input_path = ARGV[0] || Dir.pwd
@@ -14,7 +15,21 @@ def extract_cover(input_path, output_path, width = @desired_width)
 end
 
 def convert_to_mp4(input_path, output_path, width = @desired_width)
-  `ffmpeg -an -i #{input_path} -vf "scale=#{width}:-2:flags=lanczos" -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 #{output_path}`
+  options = [
+    # the input file
+    "-i #{input_path}",
+    # disable audio recording
+    '-an',
+    # video filtering: scale with lanczos algorithm
+    # https://en.wikipedia.org/wiki/Lanczos_algorithm
+    "-vf \"scale=#{width}:-2:flags=lanczos\"",
+    # video codec
+    "-vcodec libx264",
+  ]
+
+  scale_filter = width ? "-vf \"scale=#{width}:-2:flags=lanczos\"" : ""
+
+  `ffmpeg -an -i #{input_path} #{scale_filter} -vcodec libx264 -pix_fmt yuv420p -profile:v baseline -level 3 #{output_path}`
 end
 
 def convert_to_gif(input_path, output_path, width = @desired_width)
@@ -28,6 +43,10 @@ def convert_to_gif(input_path, output_path, width = @desired_width)
   end
 end
 
+unless File.exists?(output_path)
+  FileUtils.mkdir_p(output_path)
+end
+
 inputs = []
 if File.directory?(input_path)
   inputs = Dir["#{input_path}/*.mov"]
@@ -38,7 +57,10 @@ end
 inputs.each do |mov|
   basename = File.basename(mov, '.mov')
 
-  convert_to_mp4(mov, "#{output_path}/#{basename}.mp4")
-  convert_to_gif(mov, "#{output_path}/#{basename}.gif")
+  mp4_path = "#{output_path}/#{basename}.mp4"
+  convert_to_mp4(mov, mp4_path)
+  # The quality of the conversion is not good enough. A manual run through
+  # GifBrewery of the resized mp4 is the current approach.
+  # convert_to_gif(mp4_path, "#{output_path}/#{basename}.gif")
   extract_cover(mov, "#{output_path}/#{basename}.jpg")
 end
